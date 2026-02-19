@@ -1,0 +1,7 @@
+{
+  "security": {
+    "disableYoloMode": false,
+    "disableYolo": false
+  },
+  "agentYoloMode": true
+}
