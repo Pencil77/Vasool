@@ -2,13 +2,34 @@
 
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react' // Import useEffect and useState
 import { useAdminContext } from '@/app/components/AdminContext'
-
+import { User } from '@supabase/supabase-js' // Import User type
 
 export default function Navbar() {
   const router = useRouter()
   const supabase = createClient()
   const { vasoolMode, toggleVasoolMode, isAdmin } = useAdminContext()
+  const [user, setUser] = useState<User | null>(null) // State to hold user session
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      setUser(user)
+    }
+    getUser()
+
+    // Listen for auth changes
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setUser(session?.user ?? null)
+      }
+    )
+
+    return () => {
+      authListener?.subscription.unsubscribe()
+    }
+  }, [supabase.auth])
 
   const handleSignOut = async () => {
     const { error } = await supabase.auth.signOut()
@@ -23,7 +44,7 @@ export default function Navbar() {
     <nav className="bg-gray-800 p-4 text-white flex justify-between items-center">
       <div className="text-xl font-bold">Vasool</div>
       <div className="flex items-center space-x-4">
-        {isAdmin && (
+        {user && isAdmin && ( // Conditionally render Vasool Mode toggle
           <div className="flex items-center">
             <span className="mr-2">Vasool Mode</span>
             <label htmlFor="vasool-mode-toggle" className="relative inline-flex items-center cursor-pointer">
@@ -38,12 +59,14 @@ export default function Navbar() {
             </label>
           </div>
         )}
-        <button
-          onClick={handleSignOut}
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-        >
-          Sign Out
-        </button>
+        {user && ( // Conditionally render Sign Out button
+          <button
+            onClick={handleSignOut}
+            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+          >
+            Sign Out
+          </button>
+        )}
       </div>
     </nav>
   )
